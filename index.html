@@ -1,335 +1,282 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>3D Print Quote & Invoice</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  *{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial}
-  .card{ @apply rounded-2xl bg-white shadow-md p-5; }
-  .label{ @apply text-sm font-semibold text-gray-700; }
-  .ipt{ @apply mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600; }
-  .kpi{ @apply text-2xl font-bold; }
-  .pill{ @apply text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600; }
-  .row{ @apply grid grid-cols-1 sm:grid-cols-2 gap-4; }
+  :root{
+    --ink:#0f172a;         /* slate-900 */
+    --muted:#475569;       /* slate-600 */
+    --line:#e2e8f0;        /* slate-200 */
+    --brand:#2563eb;       /* blue-600 */
+  }
+  *{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+  .card{ border-radius:16px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.06); padding:20px }
+  .label{ font-size:.85rem; font-weight:600; color:#334155 }
+  .ipt{ margin-top:.25rem; width:100%; border:1px solid #CBD5E1; border-radius:12px; padding:.6rem .8rem; outline:0 }
+  .ipt:focus{ box-shadow:0 0 0 3px rgba(37,99,235,.25); border-color:#93C5FD }
+  .kpi{ font-weight:700; font-size:1.25rem }
+  .btn{ border-radius:12px; padding:.6rem .9rem; }
+  .btn-outline{ border:1px solid #CBD5E1 }
+  .btn-primary{ background:var(--brand); color:#fff }
+  .badge{ font-size:.7rem; padding:.2rem .5rem; border-radius:999px; background:#EFF6FF; color:#1D4ED8 }
+  .num{ font-variant-numeric: tabular-nums }
+
+  /* ---------- INVOICE LAYOUT (screen + print) ---------- */
+  #invoice{
+    color:var(--ink);
+    background:#fff;
+    width:8.5in;                   /* Letter width */
+    max-width:100%;
+    margin-inline:auto;
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:28px;
+  }
+  @media (min-width: 1100px){ #invoice{ position:sticky; top:88px } }
+
+  #inv-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px }
+  #inv-biz{ display:flex; align-items:center; gap:12px }
+  #logoImg{ width:60px; height:60px; object-fit:contain; display:none }
+  #logoImg.show{ display:block }
+  #inv-title{ text-align:right }
+  #inv-title .big{ font-weight:800; letter-spacing:.06em; font-size:1.6rem }
+
+  table.inv{
+    width:100%; border-collapse:separate; border-spacing:0;
+    border:1px solid var(--line); border-radius:12px; overflow:hidden
+  }
+  table.inv thead th{
+    background:#F8FAFC; color:#334155; font-size:.75rem; letter-spacing:.03em;
+    text-transform:uppercase; padding:10px 12px; text-align:left; border-bottom:1px solid var(--line)
+  }
+  table.inv td{ padding:12px; border-bottom:1px solid var(--line) }
+  table.inv tr:last-child td{ border-bottom:none }
+  table.inv .right{ text-align:right }
+  table.inv .desc{ width:65% }
+
+  .totals{
+    width:min(380px,100%); margin-left:auto; border:1px solid var(--line); border-radius:12px; overflow:hidden
+  }
+  .totals .row{ display:flex; justify-content:space-between; padding:10px 12px; border-bottom:1px solid var(--line) }
+  .totals .row:last-child{ border-bottom:none }
+  .totals .grand{ font-size:1.125rem; font-weight:700 }
+
+  .meta{ display:grid; grid-template-columns:1fr 1fr; gap:14px; color:var(--muted); font-size:.9rem }
+  .muted{ color:var(--muted) }
+
+  /* print: only invoice, perfect margins */
   @media print{
-    body{ background:#fff }
-    .noprint{ display:none !important }
-    #layout{ grid-template-columns: 1fr !important }
-    #preview{ box-shadow:none }
+    body{ margin:0; background:#fff }
+    #app{ display:none }
+    #invoice{ border:none; border-radius:0; width:7.5in; padding:.5in; page-break-inside:avoid }
   }
 </style>
 </head>
 <body class="bg-gray-50">
-<!-- Header -->
-<header class="noprint sticky top-0 z-10 bg-white/80 backdrop-blur border-b">
+
+<!-- Top bar -->
+<header class="sticky top-0 z-10 bg-white/80 backdrop-blur border-b noprint">
   <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
     <div class="flex items-center gap-3">
-      <div class="rounded-xl bg-blue-600 text-white w-8 h-8 grid place-content-center font-bold">3D</div>
-      <div class="text-lg font-bold">3D Print Quote & Invoice</div>
-      <span class="hidden md:inline pill">Live calculator</span>
-      <span class="hidden md:inline pill">Printable invoice</span>
+      <span class="badge">3D Printing</span>
+      <div class="font-semibold">Quote & Invoice</div>
     </div>
-    <div class="flex items-center gap-2">
-      <button id="saveBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Save</button>
-      <button id="loadBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Load</button>
-      <button id="clearBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Clear</button>
-      <button id="printInvoiceBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Print Invoice Only</button>
-      <button id="printBtn" class="rounded-xl bg-blue-600 text-white px-3 py-2 hover:bg-blue-700">Print / PDF (Full)</button>
+    <div class="flex gap-2">
+      <button id="saveBtn" class="btn btn-outline">Save</button>
+      <button id="loadBtn" class="btn btn-outline">Load</button>
+      <button id="clearBtn" class="btn btn-outline">Clear</button>
+      <button id="printInvoiceBtn" class="btn btn-outline">Print Invoice</button>
     </div>
   </div>
 </header>
 
-<!-- Main layout -->
-<main id="layout" class="max-w-7xl mx-auto px-4 py-6 grid lg:grid-cols-2 gap-6">
-
+<main class="max-w-7xl mx-auto px-4 py-6 grid lg:grid-cols-2 gap-6">
   <!-- LEFT: Editor -->
-  <section class="space-y-5">
-
+  <section id="app" class="space-y-5">
     <!-- Job -->
-    <div class="card" id="panel-1">
-      <div class="text-base font-bold mb-2">Job details</div>
-      <div class="row">
-        <div>
-          <label class="label">Part / Job name</label>
-          <input id="partName" class="ipt" placeholder="e.g., Mandalorian helmet - upper">
-        </div>
-        <div>
-          <label class="label">Job notes (internal)</label>
-          <input id="jobNotes" class="ipt" placeholder="layer height, infill, color, etc.">
-        </div>
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold">Job details</h2>
+        <span class="badge">Step 1</span>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div><label class="label">Part / Job name</label><input id="partName" class="ipt" placeholder="e.g., Gearbox cover"></div>
+        <div><label class="label">Internal notes</label><input id="jobNotes" class="ipt" placeholder="layer height, infill, color…"></div>
       </div>
       <div class="grid sm:grid-cols-4 gap-4 mt-4">
         <div class="sm:col-span-2">
-          <label class="label">Printer model</label>
+          <label class="label">Printer</label>
           <select id="printerSelect" class="ipt"></select>
         </div>
-        <div>
-          <label class="label">Wattage (W)</label>
-          <input id="wattage" type="number" step="1" class="ipt">
-        </div>
-        <div>
-          <label class="label">Print time (hrs)</label>
-          <input id="printHrs" type="number" step="0.01" class="ipt" placeholder="e.g. 18.5">
-        </div>
-        <div>
-          <label class="label">Printer price ($)</label>
-          <input id="printerPrice" type="number" step="0.01" class="ipt">
-        </div>
-        <div>
-          <label class="label">Lifetime hours</label>
-          <input id="lifetimeHrs" type="number" step="1" class="ipt">
-        </div>
+        <div><label class="label">Wattage (W)</label><input id="wattage" type="number" step="1" class="ipt"></div>
+        <div><label class="label">Print time (hrs)</label><input id="printHrs" type="number" step="0.01" class="ipt"></div>
+        <div><label class="label">Printer price ($)</label><input id="printerPrice" type="number" step="0.01" class="ipt"></div>
+        <div><label class="label">Lifetime hours</label><input id="lifetimeHrs" type="number" step="1" class="ipt"></div>
       </div>
     </div>
 
     <!-- Material -->
-    <div class="card" id="panel-2">
-      <div class="text-base font-bold mb-2">Material</div>
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold">Material</h2>
+        <span class="badge">Step 2</span>
+      </div>
       <div class="grid sm:grid-cols-6 gap-4">
-        <div class="sm:col-span-3">
-          <label class="label">Filament</label>
-          <select id="filamentSelect" class="ipt"></select>
-        </div>
-        <div>
-          <label class="label">Diameter (mm)</label>
-          <input id="diameter" type="number" step="0.01" class="ipt">
-        </div>
-        <div>
-          <label class="label">Density (g/cm³)</label>
-          <input id="density" type="number" step="0.01" class="ipt">
-        </div>
-        <div>
-          <label class="label">Spool price ($)</label>
-          <input id="spoolPrice" type="number" step="0.01" class="ipt">
-        </div>
-        <div>
-          <label class="label">Spool weight (g)</label>
-          <input id="spoolWeight" type="number" step="1" class="ipt">
-        </div>
-        <div>
-          <label class="label">Empty spool (g)</label>
-          <input id="emptySpool" type="number" step="1" class="ipt">
-        </div>
+        <div class="sm:col-span-3"><label class="label">Filament</label><select id="filamentSelect" class="ipt"></select></div>
+        <div><label class="label">Diameter (mm)</label><input id="diameter" type="number" step="0.01" class="ipt"></div>
+        <div><label class="label">Density (g/cm³)</label><input id="density" type="number" step="0.01" class="ipt"></div>
+        <div><label class="label">Spool price ($)</label><input id="spoolPrice" type="number" step="0.01" class="ipt"></div>
+        <div><label class="label">Spool weight (g)</label><input id="spoolWeight" type="number" step="1" class="ipt"></div>
+        <div><label class="label">Empty spool (g)</label><input id="emptySpool" type="number" step="1" class="ipt"></div>
         <div class="sm:col-span-3">
           <label class="label">Usage (enter one)</label>
           <div class="grid grid-cols-2 gap-3">
             <input id="gramsUsed" type="number" step="0.01" class="ipt" placeholder="Grams used">
-            <input id="lengthM" type="number" step="0.01" class="ipt" placeholder="Length (m)">
+            <input id="lengthM"  type="number" step="0.01" class="ipt" placeholder="Length (m)">
           </div>
         </div>
       </div>
-
       <div class="grid sm:grid-cols-3 gap-4 mt-4">
-        <div class="rounded-xl bg-gray-50 p-3">
-          <div class="text-xs text-gray-500">Cost per gram</div>
-          <div id="costPerGram" class="kpi">$0.00</div>
-        </div>
-        <div class="rounded-xl bg-gray-50 p-3">
-          <div class="text-xs text-gray-500">Grams per meter</div>
-          <div id="gPerM" class="kpi">0.000</div>
-        </div>
-        <div class="rounded-xl bg-gray-50 p-3">
-          <div class="text-xs text-gray-500">Final grams</div>
-          <div id="finalGrams" class="kpi">0.00</div>
-        </div>
+        <div class="bg-gray-50 rounded-xl p-3"><div class="text-xs text-gray-500">Cost / g</div><div id="costPerGram" class="kpi num">$0.00</div></div>
+        <div class="bg-gray-50 rounded-xl p-3"><div class="text-xs text-gray-500">g / meter</div><div id="gPerM" class="kpi num">0.000</div></div>
+        <div class="bg-gray-50 rounded-xl p-3"><div class="text-xs text-gray-500">Final grams</div><div id="finalGrams" class="kpi num">0.00</div></div>
       </div>
     </div>
 
     <!-- Rates -->
-    <div class="card" id="panel-3">
-      <div class="text-base font-bold mb-2">Rates & adjustments</div>
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold">Rates & adjustments</h2>
+        <span class="badge">Step 3</span>
+      </div>
       <div class="grid sm:grid-cols-6 gap-4">
-        <div>
-          <label class="label">Labor (hrs)</label>
-          <input id="laborHrs" type="number" step="0.01" class="ipt" value="0.5">
-        </div>
-        <div>
-          <label class="label">Labor $/hr</label>
-          <input id="laborRate" type="number" step="0.01" class="ipt" value="20">
-        </div>
-        <div>
-          <label class="label">Electricity $/kWh</label>
-          <input id="kwhRate" type="number" step="0.0001" class="ipt" value="0.1354">
-        </div>
-        <div>
-          <label class="label">Overhead %</label>
-          <input id="overheadPct" type="number" step="0.1" class="ipt" value="10">
-        </div>
-        <div>
-          <label class="label">Margin %</label>
-          <input id="marginPct" type="number" step="0.1" class="ipt" value="30">
-        </div>
-        <div>
-          <label class="label">Packaging $</label>
-          <input id="packagingCost" type="number" step="0.01" class="ipt" value="0">
-        </div>
-        <div>
-          <label class="label">Shipping $</label>
-          <input id="shipping" type="number" step="0.01" class="ipt" value="0">
-        </div>
-        <div>
-          <label class="label">Discount $</label>
-          <input id="discount" type="number" step="0.01" class="ipt" value="0">
-        </div>
-        <div>
-          <label class="label">Tax %</label>
-          <input id="taxPct" type="number" step="0.1" class="ipt" value="0">
-        </div>
+        <div><label class="label">Labor (hrs)</label><input id="laborHrs" type="number" step="0.01" class="ipt" value="0.5"></div>
+        <div><label class="label">Labor $/hr</label><input id="laborRate" type="number" step="0.01" class="ipt" value="20"></div>
+        <div><label class="label">Electricity $/kWh</label><input id="kwhRate" type="number" step="0.0001" class="ipt" value="0.1354"></div>
+        <div><label class="label">Overhead %</label><input id="overheadPct" type="number" step="0.1" class="ipt" value="10"></div>
+        <div><label class="label">Margin % (suggested)</label><input id="marginPct" type="number" step="0.1" class="ipt" value="30"></div>
+        <div><label class="label">Packaging $</label><input id="packagingCost" type="number" step="0.01" class="ipt" value="0"></div>
+        <div><label class="label">Shipping $</label><input id="shipping" type="number" step="0.01" class="ipt" value="0"></div>
+        <div><label class="label">Discount $</label><input id="discount" type="number" step="0.01" class="ipt" value="0"></div>
+        <div><label class="label">Tax %</label><input id="taxPct" type="number" step="0.1" class="ipt" value="0"></div>
       </div>
     </div>
 
-    <!-- Business / Customer / Invoice opts -->
-    <div class="card" id="panel-4">
-      <div class="text-base font-bold mb-2">Business, customer & invoice options</div>
-
-      <div class="row">
-        <div class="sm:col-span-2">
-          <label class="label">Upload logo (PNG/JPG, kept locally)</label>
+    <!-- Business / Customer -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold">Business, customer & options</h2>
+        <span class="badge">Step 4</span>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="label">Upload logo (PNG/JPG)</label>
           <input id="logoInput" type="file" accept="image/*" class="ipt">
-          <button id="clearLogo" class="mt-2 rounded-xl border px-3 py-2 hover:bg-gray-50">Remove logo</button>
+          <button id="clearLogo" class="btn btn-outline mt-2">Remove logo</button>
         </div>
-        <div class="flex items-center gap-3">
-          <input id="showNotes" type="checkbox" class="h-4 w-4" checked>
-          <label for="showNotes" class="label m-0">Show notes on invoice</label>
-        </div>
-        <div class="flex items-center gap-3">
-          <input id="showTerms" type="checkbox" class="h-4 w-4" checked>
-          <label for="showTerms" class="label m-0">Show terms on invoice</label>
+        <div class="grid grid-cols-2 gap-3 items-center">
+          <label class="label m-0 flex items-center gap-2"><input id="showNotes" type="checkbox" checked>Show notes</label>
+          <label class="label m-0 flex items-center gap-2"><input id="showTerms" type="checkbox" checked>Show terms</label>
         </div>
       </div>
-
-      <div class="row mt-2">
-        <div>
-          <label class="label">Your business / logo text</label>
-          <input id="bizName" class="ipt" value="Huron 3D Studio">
-        </div>
-        <div>
-          <label class="label">Your contact block</label>
-          <input id="bizContact" class="ipt" value="123 Main St · Huron, SD · (555) 123-4567 · you@example.com">
-        </div>
-        <div>
-          <label class="label">Customer name</label>
-          <input id="custName" class="ipt" placeholder="Customer / Company">
-        </div>
-        <div>
-          <label class="label">Customer contact</label>
-          <input id="custContact" class="ipt" placeholder="Email or phone">
-        </div>
-        <div>
-          <label class="label">Invoice #</label>
-          <input id="invNo" class="ipt" placeholder="Auto" />
-        </div>
-        <div>
-          <label class="label">PO / Reference</label>
-          <input id="po" class="ipt">
-        </div>
-        <div class="sm:col-span-2">
-          <label class="label">Public notes (shown if enabled)</label>
-          <input id="publicNotes" class="ipt" placeholder="Care, color, tolerances, lead time…">
-        </div>
-        <div class="sm:col-span-2">
-          <label class="label">Terms (shown if enabled)</label>
-          <input id="terms" class="ipt" value="Net 7 · Non-refundable once printed">
-        </div>
+      <div class="grid sm:grid-cols-2 gap-4 mt-2">
+        <div><label class="label">Your business / logo text</label><input id="bizName" class="ipt" value="Huron 3D Studio"></div>
+        <div><label class="label">Your contact</label><input id="bizContact" class="ipt" value="Huron, SD · (555) 123-4567 · you@example.com"></div>
+        <div><label class="label">Customer name</label><input id="custName" class="ipt"></div>
+        <div><label class="label">Customer contact</label><input id="custContact" class="ipt"></div>
+        <div><label class="label">Invoice #</label><input id="invNo" class="ipt" placeholder="Auto"></div>
+        <div><label class="label">PO / Ref</label><input id="po" class="ipt"></div>
+        <div><label class="label">Public notes</label><input id="publicNotes" class="ipt" placeholder="Care, color, tolerances, lead time…"></div>
+        <div><label class="label">Terms</label><input id="terms" class="ipt" value="Net 7 · Non-refundable after print"></div>
       </div>
     </div>
-
   </section>
 
-  <!-- RIGHT: Invoice Preview -->
-  <aside id="preview" class="card lg:sticky lg:top-20 h-max">
-    <div class="flex items-start justify-between">
-      <div class="flex items-center gap-3">
-        <img id="logoImg" alt="logo" class="w-12 h-12 object-contain hidden">
+  <!-- RIGHT: Polished Invoice -->
+  <aside id="invoice" class="bg-white">
+    <div id="inv-header">
+      <div id="inv-biz">
+        <img id="logoImg" alt="logo">
         <div>
           <div id="pBizName" class="text-xl font-bold">Huron 3D Studio</div>
-          <div id="pBizContact" class="text-xs text-gray-600">contact</div>
+          <div id="pBizContact" class="text-sm muted">—</div>
         </div>
       </div>
-      <div class="text-right">
-        <div class="text-2xl font-bold">INVOICE</div>
-        <div class="text-xs text-gray-500">#<span id="pInvNo">—</span> · <span id="pDate"></span></div>
+      <div id="inv-title">
+        <div class="big tracking-widest">INVOICE</div>
+        <div class="muted text-sm">#<span id="pInvNo">—</span> · <span id="pDate"></span></div>
       </div>
     </div>
 
-    <div class="grid sm:grid-cols-2 gap-3 mt-4">
+    <div class="meta mt-4">
       <div>
-        <div class="text-xs text-gray-500">Bill to</div>
+        <div class="muted text-xs">Bill to</div>
         <div id="pCustName" class="font-semibold">—</div>
-        <div id="pCustContact" class="text-xs text-gray-600">—</div>
+        <div id="pCustContact" class="text-sm muted">—</div>
       </div>
       <div class="text-right">
-        <div class="text-xs text-gray-500">PO / Ref</div>
+        <div class="muted text-xs">PO / Ref</div>
         <div id="pPO">—</div>
       </div>
     </div>
 
-    <div class="mt-4">
-      <div class="text-sm font-semibold">Item</div>
-      <div class="rounded-xl overflow-hidden border mt-1">
-        <table class="w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="text-left p-2">Description</th>
-              <th class="text-right p-2">Qty</th>
-              <th class="text-right p-2">Rate</th>
-              <th class="text-right p-2">Amount</th>
-            </tr>
-          </thead>
-          <tbody id="lines"></tbody>
-        </table>
+    <div class="mt-5">
+      <table class="inv">
+        <thead>
+          <tr>
+            <th class="desc">Description</th>
+            <th class="right">Qty</th>
+            <th class="right">Rate</th>
+            <th class="right">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="lines"></tbody>
+      </table>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mt-4">
+      <div class="space-y-1 text-sm">
+        <div class="muted">Breakdown</div>
+        <div>Filament: <span id="pFilament" class="num">$0.00</span></div>
+        <div>Energy: <span id="pEnergy" class="num">$0.00</span></div>
+        <div>Depreciation: <span id="pDepr" class="num">$0.00</span></div>
+        <div>Labor: <span id="pLabor" class="num">$0.00</span></div>
+        <div>Overhead: <span id="pOverhead" class="num">$0.00</span></div>
+        <div>Packaging: <span id="pPack" class="num">$0.00</span></div>
+        <div>Shipping: <span id="pShip" class="num">$0.00</span></div>
+      </div>
+      <div class="totals">
+        <div class="row"><span>Subtotal</span><span id="pSub" class="num">$0.00</span></div>
+        <div class="row"><span>Discount</span><span id="pDisc" class="num">-$0.00</span></div>
+        <div class="row"><span>Tax</span><span id="pTax" class="num">$0.00</span></div>
+        <div class="row grand"><span>Total due</span><span id="pTotal" class="num">$0.00</span></div>
       </div>
     </div>
 
-    <div class="mt-4 grid gap-1 text-sm">
-      <div class="flex justify-between"><span>Filament</span><span id="pFilament">$0.00</span></div>
-      <div class="flex justify-between"><span>Energy</span><span id="pEnergy">$0.00</span></div>
-      <div class="flex justify-between"><span>Depreciation</span><span id="pDepr">$0.00</span></div>
-      <div class="flex justify-between"><span>Labor</span><span id="pLabor">$0.00</span></div>
-      <div class="flex justify-between"><span>Overhead</span><span id="pOverhead">$0.00</span></div>
-      <div class="flex justify-between"><span>Packaging</span><span id="pPack">$0.00</span></div>
-      <div class="flex justify-between"><span>Shipping</span><span id="pShip">$0.00</span></div>
-      <div class="flex justify-between"><span>Subtotal</span><span id="pSub">$0.00</span></div>
-      <div class="flex justify-between"><span>Discount</span><span id="pDisc">-$0.00</span></div>
-      <div class="flex justify-between"><span>Tax</span><span id="pTax">$0.00</span></div>
-      <hr class="my-2">
-      <div class="flex justify-between text-lg font-semibold"><span>Total due</span><span id="pTotal">$0.00</span></div>
-      <div id="notesRow" class="text-xs text-gray-600 mt-2"><span class="font-semibold">Notes:</span> <span id="pPublicNotes">—</span></div>
-      <div id="termsRow" class="text-xs text-gray-600"><span class="font-semibold">Terms:</span> <span id="pTerms">—</span></div>
-    </div>
+    <div id="notesRow" class="mt-4 text-sm"><span class="font-semibold">Notes:</span> <span id="pPublicNotes">—</span></div>
+    <div id="termsRow" class="mt-1 text-sm"><span class="font-semibold">Terms:</span> <span id="pTerms">—</span></div>
   </aside>
-
 </main>
 
-<footer class="noprint text-center text-xs text-gray-500 py-6">Edit any field to see live updates • Use “Print Invoice Only” for a clean PDF</footer>
-
 <script>
-const $ = id => document.getElementById(id);
-const money = n => new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(isFinite(n)?n:0);
-const fixed = (n,d=2)=> (isFinite(n)? n.toFixed(d): '0.00');
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(isFinite(n)?n:0);
+const fixed=(n,d=2)=> (isFinite(n)?n.toFixed(d):"0.00");
 
-// seed data
-const printers = [
-  {id:"A1-USA", name:"Bambu Lab A1", watt:350, price:399, life:3000},
-  {id:"PRN-002", name:"Generic Prusa", watt:150, price:250, life:2500},
-];
-const filaments = [
-  {id:"PETG-CF", brand:"Bambu Lab", mat:"PETG-CF", dia:1.75, density:1.25, spoolG:1000, emptyG:230, price:31.99},
-  {id:"PLA-AERO", brand:"Bambu Lab", mat:"PLA Aero", dia:1.75, density:1.21, spoolG:1000, emptyG:230, price:44.99},
-  {id:"PLA", brand:"Generic", mat:"PLA", dia:1.75, density:1.24, spoolG:1000, emptyG:230, price:22.50},
-];
+/* ----- seed data ----- */
+const printers=[{id:"A1-USA",name:"Bambu Lab A1",watt:350,price:399,life:3000},{id:"PRN-002",name:"Generic Prusa",watt:150,price:250,life:2500}];
+const filaments=[{id:"PETG-CF",brand:"Bambu Lab",mat:"PETG-CF",dia:1.75,density:1.25,spoolG:1000,emptyG:230,price:31.99},{id:"PLA-AERO",brand:"Bambu Lab",mat:"PLA Aero",dia:1.75,density:1.21,spoolG:1000,emptyG:230,price:44.99},{id:"PLA",brand:"Generic",mat:"PLA",dia:1.75,density:1.24,spoolG:1000,emptyG:230,price:22.5}];
 
-// populate selects
 const pSel=$("printerSelect"), fSel=$("filamentSelect");
-printers.forEach(p=>{ const o=document.createElement('option'); o.value=p.id; o.textContent=`${p.name} (${p.id})`; pSel.appendChild(o); });
-filaments.forEach(f=>{ const o=document.createElement('option'); o.value=f.id; o.textContent=`${f.brand} ${f.mat} (${f.id})`; fSel.appendChild(o); });
+printers.forEach(p=>{const o=document.createElement("option");o.value=p.id;o.textContent=`${p.name} (${p.id})`;pSel.appendChild(o);});
+filaments.forEach(f=>{const o=document.createElement("option");o.value=f.id;o.textContent=`${f.brand} ${f.mat} (${f.id})`;fSel.appendChild(o);});
 
-// bind inputs
-const F = {
+const F={
   partName:$("partName"), jobNotes:$("jobNotes"),
   wattage:$("wattage"), printHrs:$("printHrs"), printerPrice:$("printerPrice"), lifetimeHrs:$("lifetimeHrs"),
   diameter:$("diameter"), density:$("density"), spoolWeight:$("spoolWeight"), emptySpool:$("emptySpool"), spoolPrice:$("spoolPrice"),
@@ -341,177 +288,108 @@ const F = {
   custName:$("custName"), custContact:$("custContact"),
   invNo:$("invNo"), po:$("po"), publicNotes:$("publicNotes"), terms:$("terms"),
   showNotes:$("showNotes"), showTerms:$("showTerms"),
-  logoInput:$("logoInput"), logoImg:$("logoImg"), clearLogo:$("clearLogo")
+  logoInput:$("logoInput"), clearLogo:$("clearLogo"), logoImg:$("logoImg")
 };
 
-const gramsPerMeter = (diaMM, density) => 100*Math.PI*Math.pow((diaMM/20),2)*density;
-const costPerGram = (spoolPrice, spoolG, emptyG) => {
-  const net=spoolG-emptyG; return net>0? spoolPrice/net : 0;
-};
+/* ----- helpers ----- */
+const gramsPerMeter=(d,dens)=>100*Math.PI*Math.pow(d/20,2)*dens;
+const costPerGram=(price,spoolG,emptyG)=>{const net=spoolG-emptyG;return net>0?price/net:0;};
 
-function loadPrinter(id){
-  const p = printers.find(x=>x.id===id); if(!p) return;
-  F.wattage.value=p.watt; F.printerPrice.value=p.price; F.lifetimeHrs.value=p.life; calc();
-}
-function loadFilament(id){
-  const f = filaments.find(x=>x.id===id); if(!f) return;
-  F.diameter.value=f.dia; F.density.value=f.density; F.spoolWeight.value=f.spoolG; F.emptySpool.value=f.emptyG; F.spoolPrice.value=f.price; calc();
-}
+function loadPrinter(id){const p=printers.find(x=>x.id===id);if(!p)return;F.wattage.value=p.watt;F.printerPrice.value=p.price;F.lifetimeHrs.value=p.life;calc();}
+function loadFilament(id){const f=filaments.find(x=>x.id===id);if(!f)return;F.diameter.value=f.dia;F.density.value=f.density;F.spoolWeight.value=f.spoolG;F.emptySpool.value=f.emptyG;F.spoolPrice.value=f.price;calc();}
 
 pSel.addEventListener("change",e=>loadPrinter(e.target.value));
 fSel.addEventListener("change",e=>loadFilament(e.target.value));
+Object.values(F).forEach(el=>{if(el&&el.addEventListener)el.addEventListener("input",calc);});
 
-Object.values(F).forEach(el=> {
-  if(el && el.addEventListener) el.addEventListener("input", calc);
+/* ----- persistence ----- */
+$("saveBtn").addEventListener("click",()=>{localStorage.setItem("quote",JSON.stringify(readState()));alert("Saved locally.");});
+$("loadBtn").addEventListener("click",()=>{const s=localStorage.getItem("quote");if(!s)return alert("Nothing saved.");writeState(JSON.parse(s));calc();});
+$("clearBtn").addEventListener("click",()=>{localStorage.removeItem("quote");localStorage.removeItem("logoData");Object.values(F).forEach(el=>{if(el.value!==undefined)el.value=""});F.showNotes.checked=F.showTerms.checked=true;F.logoImg.classList.remove("show");calc();});
+
+/* ----- print only invoice ----- */
+$("printInvoiceBtn").addEventListener("click",()=>window.print());
+
+/* ----- logo upload ----- */
+F.logoInput.addEventListener("change",e=>{
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();r.onload=()=>{localStorage.setItem("logoData",r.result);applyLogo(r.result);};r.readAsDataURL(file);
 });
+F.clearLogo.addEventListener("click",()=>{localStorage.removeItem("logoData");F.logoImg.classList.remove("show");});
+function applyLogo(data){if(data){F.logoImg.src=data;F.logoImg.classList.add("show");}}
 
-// save/load/clear
-$("saveBtn").addEventListener("click", ()=>{ localStorage.setItem("quote", JSON.stringify(readState())); alert("Saved locally."); });
-$("loadBtn").addEventListener("click", ()=>{
-  const s=localStorage.getItem("quote"); if(!s) return alert("Nothing saved.");
-  writeState(JSON.parse(s)); calc();
-});
-$("clearBtn").addEventListener("click", ()=>{ localStorage.removeItem("quote"); localStorage.removeItem("logoData"); Object.values(F).forEach(el=>{ if(el.value!==undefined) el.value=""; }); F.showNotes.checked=true; F.showTerms.checked=true; F.logoImg.src=""; F.logoImg.classList.add("hidden"); loadPrinter(printers[0].id); loadFilament(filaments[0].id); F.marginPct.value=30; F.overheadPct.value=10; F.kwhRate.value=0.1354; calc(); });
+/* ----- state ----- */
+function readState(){const o={};Object.entries(F).forEach(([k,el])=>{if(el&&el.value!==undefined)o[k]=el.value});o.printer=pSel.value;o.filament=fSel.value;o.showNotes=F.showNotes.checked;o.showTerms=F.showTerms.checked;o.logoData=localStorage.getItem("logoData")||"";return o;}
+function writeState(o){Object.entries(F).forEach(([k,el])=>{if(el&&el.value!==undefined&&o[k]!==undefined)el.value=o[k]});if(o.printer)pSel.value=o.printer;if(o.filament)fSel.value=o.filament;F.showNotes.checked=!!o.showNotes;F.showTerms.checked=!!o.showTerms;if(o.logoData)applyLogo(o.logoData);}
 
-// print whole page
-$("printBtn").addEventListener("click", ()=>window.print());
-
-// print invoice only
-$("printInvoiceBtn").addEventListener("click", ()=>{
-  const win = window.open("", "_blank");
-  const html = `
-  <html><head>
-    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Invoice</title>
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-      *{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial}
-      body{margin:20px}
-    </style>
-  </head>
-  <body>${$("preview").innerHTML}</body></html>`;
-  win.document.write(html);
-  win.document.close();
-  // Wait for images to load before printing
-  win.onload = () => win.print();
-});
-
-// logo upload / persist
-F.logoInput.addEventListener("change", e=>{
-  const file=e.target.files[0]; if(!file) return;
-  const reader=new FileReader();
-  reader.onload = () => { localStorage.setItem("logoData", reader.result); applyLogo(reader.result); };
-  reader.readAsDataURL(file);
-});
-F.clearLogo.addEventListener("click", ()=>{
-  localStorage.removeItem("logoData"); F.logoImg.src=""; F.logoImg.classList.add("hidden");
-});
-
-function applyLogo(dataUrl){
-  if(dataUrl){ F.logoImg.src=dataUrl; F.logoImg.classList.remove("hidden"); }
-}
-
-// state
-function readState(){
-  const o={};
-  Object.entries(F).forEach(([k,el])=>{ if(el && el.value!==undefined) o[k]=el.value; });
-  o.printer=pSel.value; o.filament=fSel.value;
-  o.showNotes=F.showNotes.checked; o.showTerms=F.showTerms.checked;
-  o.logoData=localStorage.getItem("logoData")||"";
-  return o;
-}
-function writeState(o){
-  Object.entries(F).forEach(([k,el])=>{ if(el && el.value!==undefined && o[k]!==undefined) el.value=o[k]; });
-  if(o.printer) pSel.value=o.printer;
-  if(o.filament) fSel.value=o.filament;
-  F.showNotes.checked = !!o.showNotes;
-  F.showTerms.checked = !!o.showTerms;
-  if(o.logoData){ applyLogo(o.logoData); }
-}
-
+/* ----- calculator ----- */
 function calc(){
-  // inputs
-  const dia=parseFloat(F.diameter.value)||0, density=parseFloat(F.density.value)||0;
+  const dia=parseFloat(F.diameter.value)||0, dens=parseFloat(F.density.value)||0;
   const spoolG=parseFloat(F.spoolWeight.value)||0, emptyG=parseFloat(F.emptySpool.value)||0, spoolPrice=parseFloat(F.spoolPrice.value)||0;
-  const printHrs=parseFloat(F.printHrs.value)||0, watt=parseFloat(F.wattage.value)||0;
-  const life=parseFloat(F.lifetimeHrs.value)||0, printerPrice=parseFloat(F.printerPrice.value)||0;
+  const printHrs=parseFloat(F.printHrs.value)||0, watt=parseFloat(F.wattage.value)||0, life=parseFloat(F.lifetimeHrs.value)||0, price=parseFloat(F.printerPrice.value)||0;
   const laborHrs=parseFloat(F.laborHrs.value)||0, laborRate=parseFloat(F.laborRate.value)||0, kwh=parseFloat(F.kwhRate.value)||0;
-  const overheadPct=(parseFloat(F.overheadPct.value)||0)/100, marginPct=(parseFloat(F.marginPct.value)||0)/100;
-  const packaging=parseFloat(F.packagingCost.value)||0, shipping=parseFloat(F.shipping.value)||0, discount=parseFloat(F.discount.value)||0;
-  const taxPct=(parseFloat(F.taxPct.value)||0)/100;
+  const overhead=(parseFloat(F.overheadPct.value)||0)/100, margin=(parseFloat(F.marginPct.value)||0)/100;
+  const pack=parseFloat(F.packagingCost.value)||0, ship=parseFloat(F.shipping.value)||0, disc=parseFloat(F.discount.value)||0, taxPct=(parseFloat(F.taxPct.value)||0)/100;
 
-  // derived
-  const gpm=gramsPerMeter(dia,density);
+  const gpm=gramsPerMeter(dia,dens);
   const cpg=costPerGram(spoolPrice,spoolG,emptyG);
-  const grams = F.gramsUsed.value!=="" ? parseFloat(F.gramsUsed.value)||0 : ((parseFloat(F.lengthM.value)||0)*gpm);
+  const grams=F.gramsUsed.value!==""?parseFloat(F.gramsUsed.value)||0:(parseFloat(F.lengthM.value)||0)*gpm;
 
-  const filamentCost = grams*cpg;
-  const energyCost = (watt*printHrs/1000)*kwh;
-  const depreciation = life>0? (printHrs/life)*printerPrice : 0;
-  const laborCost = laborHrs*laborRate;
-  const overheadCost = (filamentCost+energyCost+depreciation+laborCost)*overheadPct;
+  const filament=grams*cpg;
+  const energy=(watt*printHrs/1000)*kwh;
+  const depr=life>0?(printHrs/life)*price:0;
+  const labor=laborHrs*laborRate;
+  const overheadCost=(filament+energy+depr+labor)*overhead;
+  const subtotal=filament+energy+depr+labor+overheadCost+pack;
+  const beforeTax=Math.max(0,subtotal-disc)+ship;
+  const tax=beforeTax*taxPct;
+  const total=beforeTax+tax;
+  const suggested=subtotal*(1+margin);
 
-  const subtotal = filamentCost+energyCost+depreciation+laborCost+overheadCost+packaging;
-  const beforeTax = Math.max(0, subtotal - discount) + shipping;
-  const tax = beforeTax*taxPct;
-  const total = beforeTax + tax;
+  $("costPerGram").textContent=money(cpg);
+  $("gPerM").textContent=fixed(gpm,3);
+  $("finalGrams").textContent=fixed(grams,2);
 
-  const suggested = subtotal*(1+marginPct); // for reference
+  $("pFilament").textContent=money(filament);
+  $("pEnergy").textContent=money(energy);
+  $("pDepr").textContent=money(depr);
+  $("pLabor").textContent=money(labor);
+  $("pOverhead").textContent=money(overheadCost);
+  $("pPack").textContent=money(pack);
+  $("pShip").textContent=money(ship);
+  $("pSub").textContent=money(subtotal);
+  $("pDisc").textContent="-"+money(disc);
+  $("pTax").textContent=money(tax);
+  $("pTotal").textContent=money(total);
 
-  $("gPerM").textContent = fixed(gpm,3);
-  $("costPerGram").textContent = money(cpg);
-  $("finalGrams").textContent = fixed(grams,2);
+  $("pBizName").textContent=F.bizName.value||"—";
+  $("pBizContact").textContent=F.bizContact.value||"—";
+  $("pCustName").textContent=F.custName.value||"—";
+  $("pCustContact").textContent=F.custContact.value||"—";
+  $("pPO").textContent=F.po.value||"—";
+  $("pPublicNotes").textContent=F.publicNotes.value||"—";
+  $("pTerms").textContent=F.terms.value||"—";
+  $("notesRow").style.display=F.showNotes.checked?"":"none";
+  $("termsRow").style.display=F.showTerms.checked?"":"none";
+  $("pInvNo").textContent=F.invNo.value||autoInv();
+  $("pDate").textContent=new Date().toLocaleDateString();
 
-  $("pFilament").textContent = money(filamentCost);
-  $("pEnergy").textContent   = money(energyCost);
-  $("pDepr").textContent     = money(depreciation);
-  $("pLabor").textContent    = money(laborCost);
-  $("pOverhead").textContent = money(overheadCost);
-  $("pPack").textContent     = money(packaging);
-  $("pShip").textContent     = money(shipping);
-  $("pSub").textContent      = money(subtotal);
-  $("pDisc").textContent     = "-"+money(discount);
-  $("pTax").textContent      = money(tax);
-  $("pTotal").textContent    = money(total);
-
-  $("pBizName").textContent = F.bizName.value || "—";
-  $("pBizContact").textContent = F.bizContact.value || "—";
-  $("pCustName").textContent = F.custName.value || "—";
-  $("pCustContact").textContent = F.custContact.value || "—";
-  $("pPO").textContent = F.po.value || "—";
-  $("pPublicNotes").textContent = F.publicNotes.value || "—";
-  $("pTerms").textContent = F.terms.value || "—";
-  $("notesRow").style.display = F.showNotes.checked ? "" : "none";
-  $("termsRow").style.display = F.showTerms.checked ? "" : "none";
-  $("pInvNo").textContent = F.invNo.value || autoInv();
-  $("pDate").textContent = new Date().toLocaleDateString();
-
-  // invoice lines (single line summarizing the job)
-  const desc = (F.partName.value||"3D print job") + (F.jobNotes.value? ` — ${F.jobNotes.value}`:"");
-  const qty = 1;
-  const rate = suggested;  // suggested price (pre-tax) for reference
-  const amount = total;    // final total due
-  $("lines").innerHTML = `
-    <tr class="border-t">
-      <td class="p-2">${escapeHTML(desc)}</td>
-      <td class="p-2 text-right">${qty}</td>
-      <td class="p-2 text-right">${money(rate)}</td>
-      <td class="p-2 text-right">${money(amount)}</td>
-    </tr>
-  `;
+  const desc=(F.partName.value||"3D print job")+(F.jobNotes.value?` — ${F.jobNotes.value}`:"");
+  $("lines").innerHTML=`
+    <tr>
+      <td class="desc">${escapeHTML(desc)}</td>
+      <td class="right num">1</td>
+      <td class="right num">${money(suggested)}</td>
+      <td class="right num">${money(total)}</td>
+    </tr>`;
 }
 
-function escapeHTML(s){ return (s||"").replace(/[&<>"']/g,m=>({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])); }
-function autoInv(){
-  const d=new Date(), pad=n=>String(n).padStart(2,"0");
-  return `INV-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
-}
+function escapeHTML(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+function autoInv(){const d=new Date(),pad=n=>String(n).padStart(2,"0");return `INV-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`}
 
-// init defaults + restore logo
-(function init(){
-  const logo = localStorage.getItem("logoData");
-  if(logo) applyLogo(logo);
+/* init */
+(function(){
+  const logo=localStorage.getItem("logoData"); if(logo){F.logoImg.src=logo;F.logoImg.classList.add("show")}
   pSel.value=printers[0].id; fSel.value=filaments[0].id;
   loadPrinter(printers[0].id); loadFilament(filaments[0].id);
   calc();
