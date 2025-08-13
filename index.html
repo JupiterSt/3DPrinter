@@ -14,9 +14,6 @@
   .ipt{ @apply mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-600; }
   .kpi{ @apply text-2xl font-bold; }
   .pill{ @apply text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600; }
-  .section-title{ @apply text-base font-bold mb-2 flex items-center gap-2; }
-  .step{ @apply flex items-center gap-2 text-sm font-medium text-gray-600; }
-  .step.active{ @apply text-blue-700; }
   .row{ @apply grid grid-cols-1 sm:grid-cols-2 gap-4; }
   @media print{
     body{ background:#fff }
@@ -40,7 +37,8 @@
       <button id="saveBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Save</button>
       <button id="loadBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Load</button>
       <button id="clearBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Clear</button>
-      <button id="printBtn" class="rounded-xl bg-blue-600 text-white px-3 py-2 hover:bg-blue-700">Print / PDF</button>
+      <button id="printInvoiceBtn" class="rounded-xl border px-3 py-2 hover:bg-gray-50">Print Invoice Only</button>
+      <button id="printBtn" class="rounded-xl bg-blue-600 text-white px-3 py-2 hover:bg-blue-700">Print / PDF (Full)</button>
     </div>
   </div>
 </header>
@@ -51,19 +49,9 @@
   <!-- LEFT: Editor -->
   <section class="space-y-5">
 
-    <!-- Steps -->
-    <div class="card noprint">
-      <div class="flex flex-wrap gap-3">
-        <div class="step active" data-step="1"><span class="w-6 h-6 rounded-full bg-blue-600 text-white grid place-content-center">1</span> Job</div>
-        <div class="step" data-step="2"><span class="w-6 h-6 rounded-full bg-blue-600/20 text-blue-700 grid place-content-center">2</span> Material</div>
-        <div class="step" data-step="3"><span class="w-6 h-6 rounded-full bg-blue-600/20 text-blue-700 grid place-content-center">3</span> Rates</div>
-        <div class="step" data-step="4"><span class="w-6 h-6 rounded-full bg-blue-600/20 text-blue-700 grid place-content-center">4</span> Customer & Invoice</div>
-      </div>
-    </div>
-
     <!-- Job -->
     <div class="card" id="panel-1">
-      <div class="section-title">Job details</div>
+      <div class="text-base font-bold mb-2">Job details</div>
       <div class="row">
         <div>
           <label class="label">Part / Job name</label>
@@ -100,7 +88,7 @@
 
     <!-- Material -->
     <div class="card" id="panel-2">
-      <div class="section-title">Material</div>
+      <div class="text-base font-bold mb-2">Material</div>
       <div class="grid sm:grid-cols-6 gap-4">
         <div class="sm:col-span-3">
           <label class="label">Filament</label>
@@ -153,7 +141,7 @@
 
     <!-- Rates -->
     <div class="card" id="panel-3">
-      <div class="section-title">Rates & adjustments</div>
+      <div class="text-base font-bold mb-2">Rates & adjustments</div>
       <div class="grid sm:grid-cols-6 gap-4">
         <div>
           <label class="label">Labor (hrs)</label>
@@ -194,10 +182,27 @@
       </div>
     </div>
 
-    <!-- Customer & Invoice -->
+    <!-- Business / Customer / Invoice opts -->
     <div class="card" id="panel-4">
-      <div class="section-title">Customer & invoice</div>
+      <div class="text-base font-bold mb-2">Business, customer & invoice options</div>
+
       <div class="row">
+        <div class="sm:col-span-2">
+          <label class="label">Upload logo (PNG/JPG, kept locally)</label>
+          <input id="logoInput" type="file" accept="image/*" class="ipt">
+          <button id="clearLogo" class="mt-2 rounded-xl border px-3 py-2 hover:bg-gray-50">Remove logo</button>
+        </div>
+        <div class="flex items-center gap-3">
+          <input id="showNotes" type="checkbox" class="h-4 w-4" checked>
+          <label for="showNotes" class="label m-0">Show notes on invoice</label>
+        </div>
+        <div class="flex items-center gap-3">
+          <input id="showTerms" type="checkbox" class="h-4 w-4" checked>
+          <label for="showTerms" class="label m-0">Show terms on invoice</label>
+        </div>
+      </div>
+
+      <div class="row mt-2">
         <div>
           <label class="label">Your business / logo text</label>
           <input id="bizName" class="ipt" value="Huron 3D Studio">
@@ -223,11 +228,11 @@
           <input id="po" class="ipt">
         </div>
         <div class="sm:col-span-2">
-          <label class="label">Public notes (on invoice)</label>
+          <label class="label">Public notes (shown if enabled)</label>
           <input id="publicNotes" class="ipt" placeholder="Care, color, tolerances, lead time…">
         </div>
         <div class="sm:col-span-2">
-          <label class="label">Terms</label>
+          <label class="label">Terms (shown if enabled)</label>
           <input id="terms" class="ipt" value="Net 7 · Non-refundable once printed">
         </div>
       </div>
@@ -238,9 +243,12 @@
   <!-- RIGHT: Invoice Preview -->
   <aside id="preview" class="card lg:sticky lg:top-20 h-max">
     <div class="flex items-start justify-between">
-      <div>
-        <div id="pBizName" class="text-xl font-bold">Huron 3D Studio</div>
-        <div id="pBizContact" class="text-xs text-gray-600">contact</div>
+      <div class="flex items-center gap-3">
+        <img id="logoImg" alt="logo" class="w-12 h-12 object-contain hidden">
+        <div>
+          <div id="pBizName" class="text-xl font-bold">Huron 3D Studio</div>
+          <div id="pBizContact" class="text-xs text-gray-600">contact</div>
+        </div>
       </div>
       <div class="text-right">
         <div class="text-2xl font-bold">INVOICE</div>
@@ -272,9 +280,7 @@
               <th class="text-right p-2">Amount</th>
             </tr>
           </thead>
-          <tbody id="lines">
-            <!-- auto row -->
-          </tbody>
+          <tbody id="lines"></tbody>
         </table>
       </div>
     </div>
@@ -292,14 +298,14 @@
       <div class="flex justify-between"><span>Tax</span><span id="pTax">$0.00</span></div>
       <hr class="my-2">
       <div class="flex justify-between text-lg font-semibold"><span>Total due</span><span id="pTotal">$0.00</span></div>
-      <div class="text-xs text-gray-600 mt-2"><span class="font-semibold">Notes:</span> <span id="pPublicNotes">—</span></div>
-      <div class="text-xs text-gray-600"><span class="font-semibold">Terms:</span> <span id="pTerms">—</span></div>
+      <div id="notesRow" class="text-xs text-gray-600 mt-2"><span class="font-semibold">Notes:</span> <span id="pPublicNotes">—</span></div>
+      <div id="termsRow" class="text-xs text-gray-600"><span class="font-semibold">Terms:</span> <span id="pTerms">—</span></div>
     </div>
   </aside>
 
 </main>
 
-<footer class="noprint text-center text-xs text-gray-500 py-6">Edit any field to see live updates • Print to save a PDF</footer>
+<footer class="noprint text-center text-xs text-gray-500 py-6">Edit any field to see live updates • Use “Print Invoice Only” for a clean PDF</footer>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -334,9 +340,10 @@ const F = {
   bizName:$("bizName"), bizContact:$("bizContact"),
   custName:$("custName"), custContact:$("custContact"),
   invNo:$("invNo"), po:$("po"), publicNotes:$("publicNotes"), terms:$("terms"),
+  showNotes:$("showNotes"), showTerms:$("showTerms"),
+  logoInput:$("logoInput"), logoImg:$("logoImg"), clearLogo:$("clearLogo")
 };
 
-// equations
 const gramsPerMeter = (diaMM, density) => 100*Math.PI*Math.pow((diaMM/20),2)*density;
 const costPerGram = (spoolPrice, spoolG, emptyG) => {
   const net=spoolG-emptyG; return net>0? spoolPrice/net : 0;
@@ -354,26 +361,73 @@ function loadFilament(id){
 pSel.addEventListener("change",e=>loadPrinter(e.target.value));
 fSel.addEventListener("change",e=>loadFilament(e.target.value));
 
-Object.values(F).forEach(el=> el.addEventListener("input", calc));
+Object.values(F).forEach(el=> {
+  if(el && el.addEventListener) el.addEventListener("input", calc);
+});
 
+// save/load/clear
 $("saveBtn").addEventListener("click", ()=>{ localStorage.setItem("quote", JSON.stringify(readState())); alert("Saved locally."); });
 $("loadBtn").addEventListener("click", ()=>{
   const s=localStorage.getItem("quote"); if(!s) return alert("Nothing saved.");
   writeState(JSON.parse(s)); calc();
 });
-$("clearBtn").addEventListener("click", ()=>{ localStorage.removeItem("quote"); Object.values(F).forEach(el=>el.value=""); loadPrinter(printers[0].id); loadFilament(filaments[0].id); F.marginPct.value=30; F.overheadPct.value=10; F.kwhRate.value=0.1354; calc(); });
+$("clearBtn").addEventListener("click", ()=>{ localStorage.removeItem("quote"); localStorage.removeItem("logoData"); Object.values(F).forEach(el=>{ if(el.value!==undefined) el.value=""; }); F.showNotes.checked=true; F.showTerms.checked=true; F.logoImg.src=""; F.logoImg.classList.add("hidden"); loadPrinter(printers[0].id); loadFilament(filaments[0].id); F.marginPct.value=30; F.overheadPct.value=10; F.kwhRate.value=0.1354; calc(); });
+
+// print whole page
 $("printBtn").addEventListener("click", ()=>window.print());
 
+// print invoice only
+$("printInvoiceBtn").addEventListener("click", ()=>{
+  const win = window.open("", "_blank");
+  const html = `
+  <html><head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Invoice</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      *{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial}
+      body{margin:20px}
+    </style>
+  </head>
+  <body>${$("preview").innerHTML}</body></html>`;
+  win.document.write(html);
+  win.document.close();
+  // Wait for images to load before printing
+  win.onload = () => win.print();
+});
+
+// logo upload / persist
+F.logoInput.addEventListener("change", e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload = () => { localStorage.setItem("logoData", reader.result); applyLogo(reader.result); };
+  reader.readAsDataURL(file);
+});
+F.clearLogo.addEventListener("click", ()=>{
+  localStorage.removeItem("logoData"); F.logoImg.src=""; F.logoImg.classList.add("hidden");
+});
+
+function applyLogo(dataUrl){
+  if(dataUrl){ F.logoImg.src=dataUrl; F.logoImg.classList.remove("hidden"); }
+}
+
+// state
 function readState(){
   const o={};
-  Object.entries(F).forEach(([k,el])=>o[k]=el.value);
+  Object.entries(F).forEach(([k,el])=>{ if(el && el.value!==undefined) o[k]=el.value; });
   o.printer=pSel.value; o.filament=fSel.value;
+  o.showNotes=F.showNotes.checked; o.showTerms=F.showTerms.checked;
+  o.logoData=localStorage.getItem("logoData")||"";
   return o;
 }
 function writeState(o){
-  Object.entries(F).forEach(([k,el])=>{ if(o[k]!==undefined) el.value=o[k]; });
+  Object.entries(F).forEach(([k,el])=>{ if(el && el.value!==undefined && o[k]!==undefined) el.value=o[k]; });
   if(o.printer) pSel.value=o.printer;
   if(o.filament) fSel.value=o.filament;
+  F.showNotes.checked = !!o.showNotes;
+  F.showTerms.checked = !!o.showTerms;
+  if(o.logoData){ applyLogo(o.logoData); }
 }
 
 function calc(){
@@ -405,12 +459,10 @@ function calc(){
 
   const suggested = subtotal*(1+marginPct); // for reference
 
-  // KPI tiles
   $("gPerM").textContent = fixed(gpm,3);
   $("costPerGram").textContent = money(cpg);
   $("finalGrams").textContent = fixed(grams,2);
 
-  // preview small breakdown
   $("pFilament").textContent = money(filamentCost);
   $("pEnergy").textContent   = money(energyCost);
   $("pDepr").textContent     = money(depreciation);
@@ -423,7 +475,6 @@ function calc(){
   $("pTax").textContent      = money(tax);
   $("pTotal").textContent    = money(total);
 
-  // invoice header fields
   $("pBizName").textContent = F.bizName.value || "—";
   $("pBizContact").textContent = F.bizContact.value || "—";
   $("pCustName").textContent = F.custName.value || "—";
@@ -431,14 +482,16 @@ function calc(){
   $("pPO").textContent = F.po.value || "—";
   $("pPublicNotes").textContent = F.publicNotes.value || "—";
   $("pTerms").textContent = F.terms.value || "—";
+  $("notesRow").style.display = F.showNotes.checked ? "" : "none";
+  $("termsRow").style.display = F.showTerms.checked ? "" : "none";
   $("pInvNo").textContent = F.invNo.value || autoInv();
   $("pDate").textContent = new Date().toLocaleDateString();
 
   // invoice lines (single line summarizing the job)
   const desc = (F.partName.value||"3D print job") + (F.jobNotes.value? ` — ${F.jobNotes.value}`:"");
   const qty = 1;
-  const rate = suggested;  // suggested price from margin (optional)
-  const amount = total;    // final total due (with tax, shipping, discount)
+  const rate = suggested;  // suggested price (pre-tax) for reference
+  const amount = total;    // final total due
   $("lines").innerHTML = `
     <tr class="border-t">
       <td class="p-2">${escapeHTML(desc)}</td>
@@ -455,8 +508,10 @@ function autoInv(){
   return `INV-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
-// init defaults
+// init defaults + restore logo
 (function init(){
+  const logo = localStorage.getItem("logoData");
+  if(logo) applyLogo(logo);
   pSel.value=printers[0].id; fSel.value=filaments[0].id;
   loadPrinter(printers[0].id); loadFilament(filaments[0].id);
   calc();
