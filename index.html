@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>3D Printing Cost Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --ring: 0 0 0 3px rgba(59,130,246,.35) }
+    *{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,"Helvetica Neue",Arial}
+    .card{ @apply rounded-2xl shadow-lg bg-white p-5; }
+    .label{ @apply text-sm font-semibold text-gray-700; }
+    .ipt{ @apply mt-1 w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500; }
+    .kpi{ @apply text-2xl font-bold; }
+    @media print { .noprint{display:none} .card{box-shadow:none} body{background:#fff} }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <header class="noprint sticky top-0 z-10 bg-white/70 backdrop-blur border-b">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-xl font-bold">3D Printing Cost Calculator</h1>
+      <div class="flex gap-2">
+        <button id="resetBtn" class="rounded-xl px-3 py-2 border hover:bg-gray-50">Reset</button>
+        <button onclick="window.print()" class="rounded-xl px-3 py-2 bg-blue-600 text-white hover:bg-blue-700">Print / Save PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 grid lg:grid-cols-3 gap-5">
+    <!-- Left column: Printer + Material -->
+    <section class="lg:col-span-2 grid md:grid-cols-2 gap-5">
+      <div class="card">
+        <h2 class="text-lg font-bold mb-3">Printer</h2>
+        <label class="label">Printer Profile</label>
+        <select id="printerSelect" class="ipt"></select>
+
+        <div class="grid grid-cols-2 gap-4 mt-3">
+          <div>
+            <label class="label">Wattage (W)</label>
+            <input id="wattage" type="number" step="1" class="ipt">
+          </div>
+          <div>
+            <label class="label">Print Time (hrs)</label>
+            <input id="printHrs" type="number" step="0.01" class="ipt" placeholder="e.g. 5.5">
+          </div>
+          <div>
+            <label class="label">Purchase Price ($)</label>
+            <input id="printerPrice" type="number" step="0.01" class="ipt">
+          </div>
+          <div>
+            <label class="label">Lifetime Hours</label>
+            <input id="lifetimeHrs" type="number" step="1" class="ipt">
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="label">Notes</label>
+          <input id="partName" class="ipt" placeholder="Part name / notes">
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="text-lg font-bold mb-3">Material</h2>
+        <label class="label">Filament Profile</label>
+        <select id="filamentSelect" class="ipt"></select>
+
+        <div class="grid grid-cols-2 gap-4 mt-3">
+          <div>
+            <label class="label">Diameter (mm)</label>
+            <input id="diameter" type="number" step="0.01" class="ipt">
+          </div>
+          <div>
+            <label class="label">Density (g/cm³)</label>
+            <input id="density" type="number" step="0.01" class="ipt">
+          </div>
+          <div>
+            <label class="label">Spool Weight (g)</label>
+            <input id="spoolWeight" type="number" step="1" class="ipt">
+          </div>
+          <div>
+            <label class="label">Empty Spool (g)</label>
+            <input id="emptySpool" type="number" step="1" class="ipt">
+          </div>
+          <div>
+            <label class="label">Spool Price ($)</label>
+            <input id="spoolPrice" type="number" step="0.01" class="ipt">
+          </div>
+          <div class="flex items-end gap-2">
+            <div class="grow">
+              <label class="label">Enter either Grams used OR Length (m)</label>
+              <input id="gramsUsed" type="number" step="0.01" class="ipt" placeholder="Grams used">
+            </div>
+            <span class="py-2">or</span>
+            <input id="lengthM" type="number" step="0.01" class="ipt" placeholder="Length (m)">
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-3 gap-4">
+          <div class="p-3 rounded-xl bg-gray-50">
+            <div class="text-xs text-gray-600">Cost / g</div>
+            <div id="costPerGram" class="kpi">$0.00</div>
+          </div>
+          <div class="p-3 rounded-xl bg-gray-50">
+            <div class="text-xs text-gray-600">g / meter</div>
+            <div id="gPerM" class="kpi">0.00</div>
+          </div>
+          <div class="p-3 rounded-xl bg-gray-50">
+            <div class="text-xs text-gray-600">Final grams</div>
+            <div id="finalGrams" class="kpi">0.00</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right column: Labor, Overhead, Totals -->
+    <aside class="grid gap-5">
+      <div class="card">
+        <h2 class="text-lg font-bold mb-3">Labor & Rates</h2>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label">Active Labor (hrs)</label>
+            <input id="laborHrs" type="number" step="0.01" class="ipt" value="0.5">
+          </div>
+          <div>
+            <label class="label">Labor $/hr</label>
+            <input id="laborRate" type="number" step="0.01" class="ipt" value="20">
+          </div>
+          <div>
+            <label class="label">Electricity $/kWh</label>
+            <input id="kwhRate" type="number" step="0.0001" class="ipt" value="0.1354">
+          </div>
+          <div>
+            <label class="label">Overhead %</label>
+            <input id="overheadPct" type="number" step="0.1" class="ipt" value="10">
+          </div>
+          <div>
+            <label class="label">Target Margin %</label>
+            <input id="marginPct" type="number" step="0.1" class="ipt" value="30">
+          </div>
+          <div>
+            <label class="label">Packaging $</label>
+            <input id="packagingCost" type="number" step="0.01" class="ipt" value="0">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="text-lg font-bold mb-3">Totals</h2>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span>Filament cost</span><span id="filamentCost">$0.00</span></div>
+          <div class="flex justify-between"><span>Energy cost</span><span id="energyCost">$0.00</span></div>
+          <div class="flex justify-between"><span>Printer depreciation</span><span id="deprCost">$0.00</span></div>
+          <div class="flex justify-between"><span>Labor cost</span><span id="laborCost">$0.00</span></div>
+          <div class="flex justify-between"><span>Overhead</span><span id="overheadCost">$0.00</span></div>
+          <div class="flex justify-between"><span>Packaging</span><span id="packCost">$0.00</span></div>
+          <hr class="my-2">
+          <div class="flex justify-between text-lg font-semibold"><span>Total cost</span><span id="totalCost">$0.00</span></div>
+          <div class="flex justify-between text-lg font-semibold"><span>Suggested price</span><span id="suggestedPrice">$0.00</span></div>
+        </div>
+        <button id="copyBtn" class="noprint mt-4 w-full rounded-xl bg-emerald-600 text-white py-2 hover:bg-emerald-700">Copy quote to clipboard</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="noprint text-center text-xs text-gray-500 py-6">Made for quick quoting • Edit any field to see live updates</footer>
+
+  <script>
+    // ---- helpers ----
+    const $ = (id) => document.getElementById(id);
+    const money = (n) => new Intl.NumberFormat(undefined, {style: 'currency', currency: 'USD'}).format(isFinite(n)? n : 0);
+    const fixed = (n, d=2) => (isFinite(n) ? n.toFixed(d) : "0".padStart(1));
+
+    // ---- seed data (edit these or add your own) ----
+    const printers = [
+      {id:"A1-USA", name:"Bambu Lab A1", watt:350, price:399, life:3000},
+      {id:"PRN-002", name:"Generic Prusa Clone", watt:150, price:250, life:2500},
+    ];
+    const filaments = [
+      {id:"PETG-CF", brand:"Bambu Lab", mat:"PETG-CF", dia:1.75, density:1.25, spoolG:1000, emptyG:230, price:31.99},
+      {id:"PLA-AERO", brand:"Bambu Lab", mat:"PLA Aero", dia:1.75, density:1.21, spoolG:1000, emptyG:230, price:44.99},
+      {id:"PLA-Generic", brand:"Generic", mat:"PLA", dia:1.75, density:1.24, spoolG:1000, emptyG:230, price:22.50},
+    ];
+
+    // ---- populate selects ----
+    const pSel = $("printerSelect"), fSel = $("filamentSelect");
+    printers.forEach(p=>{
+      const o = document.createElement("option");
+      o.value = p.id; o.textContent = `${p.name} (${p.id})`; pSel.appendChild(o);
+    });
+    filaments.forEach(f=>{
+      const o = document.createElement("option");
+      o.value = f.id; o.textContent = `${f.brand} ${f.mat} (${f.id})`; fSel.appendChild(o);
+    });
+
+    // ---- bind fields ----
+    const fields = {
+      wattage: $("wattage"),
+      printHrs: $("printHrs"),
+      printerPrice: $("printerPrice"),
+      lifetimeHrs: $("lifetimeHrs"),
+      diameter: $("diameter"),
+      density: $("density"),
+      spoolWeight: $("spoolWeight"),
+      emptySpool: $("emptySpool"),
+      spoolPrice: $("spoolPrice"),
+      gramsUsed: $("gramsUsed"),
+      lengthM: $("lengthM"),
+      laborHrs: $("laborHrs"),
+      laborRate: $("laborRate"),
+      kwhRate: $("kwhRate"),
+      overheadPct: $("overheadPct"),
+      marginPct: $("marginPct"),
+      packagingCost: $("packagingCost"),
+    };
+
+    function loadPrinter(id){
+      const p = printers.find(x=>x.id===id); if(!p) return;
+      fields.wattage.value = p.watt;
+      fields.printerPrice.value = p.price;
+      fields.lifetimeHrs.value = p.life;
+      calc();
+    }
+    function loadFilament(id){
+      const f = filaments.find(x=>x.id===id); if(!f) return;
+      fields.diameter.value = f.dia;
+      fields.density.value = f.density;
+      fields.spoolWeight.value = f.spoolG;
+      fields.emptySpool.value = f.emptyG;
+      fields.spoolPrice.value = f.price;
+      calc();
+    }
+
+    pSel.addEventListener("change", e => loadPrinter(e.target.value));
+    fSel.addEventListener("change", e => loadFilament(e.target.value));
+
+    Object.values(fields).forEach(el => el.addEventListener("input", calc));
+    $("resetBtn").addEventListener("click", () => { loadPrinter(printers[0].id); loadFilament(filaments[0].id); fields.printHrs.value=""; fields.gramsUsed.value=""; fields.lengthM.value=""; $("partName").value=""; calc(); });
+
+    $("copyBtn").addEventListener("click", () => {
+      const txt = [
+        `Part: ${$("partName").value || "(unnamed)"}`,
+        `Printer: ${pSel.options[pSel.selectedIndex].text}`,
+        `Material: ${fSel.options[fSel.selectedIndex].text}`,
+        `Print time: ${fields.printHrs.value||0} hrs`,
+        `Final grams: ${$("finalGrams").textContent} g`,
+        `Filament: ${$("filamentCost").textContent}`,
+        `Energy: ${$("energyCost").textContent}`,
+        `Depreciation: ${$("deprCost").textContent}`,
+        `Labor: ${$("laborCost").textContent}`,
+        `Overhead: ${$("overheadCost").textContent}`,
+        `Packaging: ${$("packCost").textContent}`,
+        `Total cost: ${$("totalCost").textContent}`,
+        `Suggested price: ${$("suggestedPrice").textContent}`
+      ].join("\n");
+      navigator.clipboard.writeText(txt);
+      $("copyBtn").textContent = "Copied!"; setTimeout(()=>$("copyBtn").textContent="Copy quote to clipboard",1200);
+    });
+
+    // ---- math ----
+    function gramsPerMeter(diaMM, density){
+      // 100 * PI * ((Diameter_mm/20)^2) * Density_g_cm3
+      const val = 100 * Math.PI * Math.pow((diaMM/20),2) * density;
+      return val;
+    }
+    function costPerGram(spoolPrice, spoolG, emptyG){
+      const net = (spoolG - emptyG); if(net<=0) return 0;
+      return spoolPrice / net;
+    }
+
+    function calc(){
+      const dia = parseFloat(fields.diameter.value)||0;
+      const density = parseFloat(fields.density.value)||0;
+      const spoolG = parseFloat(fields.spoolWeight.value)||0;
+      const emptyG = parseFloat(fields.emptySpool.value)||0;
+      const spoolPrice = parseFloat(fields.spoolPrice.value)||0;
+      const printHrs = parseFloat(fields.printHrs.value)||0;
+      const watt = parseFloat(fields.wattage.value)||0;
+      const life = parseFloat(fields.lifetimeHrs.value)||0;
+      const printerPrice = parseFloat(fields.printerPrice.value)||0;
+      const laborHrs = parseFloat(fields.laborHrs.value)||0;
+      const laborRate = parseFloat(fields.laborRate.value)||0;
+      const kwh = parseFloat(fields.kwhRate.value)||0;
+      const overheadPct = (parseFloat(fields.overheadPct.value)||0)/100;
+      const marginPct = (parseFloat(fields.marginPct.value)||0)/100;
+      const packaging = parseFloat(fields.packagingCost.value)||0;
+
+      const gpm = gramsPerMeter(dia, density);
+      const cpg = costPerGram(spoolPrice, spoolG, emptyG);
+
+      // final grams (prefer direct grams; else compute from length)
+      const grams = (fields.gramsUsed.value !== "" && !isNaN(parseFloat(fields.gramsUsed.value)))
+        ? parseFloat(fields.gramsUsed.value)
+        : ((fields.lengthM.value !== "" && !isNaN(parseFloat(fields.lengthM.value))) ? parseFloat(fields.lengthM.value) * gpm : 0);
+
+      const filamentCost = grams * cpg;
+      const energyCost = (watt * printHrs / 1000) * kwh;
+      const depreciation = life>0 ? (printHrs / life) * printerPrice : 0;
+      const laborCost = laborHrs * laborRate;
+      const overheadCost = (filamentCost + energyCost + depreciation + laborCost) * overheadPct;
+      const totalCost = filamentCost + energyCost + depreciation + laborCost + overheadCost + packaging;
+      const suggested = totalCost * (1 + marginPct);
+
+      // UI
+      $("gPerM").textContent = fixed(gpm, 3);
+      $("costPerGram").textContent = money(cpg);
+      $("finalGrams").textContent = fixed(grams, 2);
+      $("filamentCost").textContent = money(filamentCost);
+      $("energyCost").textContent = money(energyCost);
+      $("deprCost").textContent = money(depreciation);
+      $("laborCost").textContent = money(laborCost);
+      $("overheadCost").textContent = money(overheadCost);
+      $("packCost").textContent = money(packaging);
+      $("totalCost").textContent = money(totalCost);
+      $("suggestedPrice").textContent = money(suggested);
+    }
+
+    // init
+    loadPrinter(printers[0].id);
+    loadFilament(filaments[0].id);
+    calc();
+  </script>
+</body>
+</html>
