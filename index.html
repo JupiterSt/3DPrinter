@@ -69,10 +69,11 @@
   .meta{ display:grid; grid-template-columns:1fr 1fr; gap:14px; color:var(--muted); font-size:.9rem }
   .muted{ color:var(--muted) }
 
-  /* print: only invoice, perfect margins */
+  /* print: only invoice, perfect margins, hide top bar/buttons */
   @media print{
     body{ margin:0; background:#fff }
-    #app{ display:none }
+    .noprint{ display:none !important }   /* <— hide Save/Load/Clear/Print buttons bar */
+    #app{ display:none }                   /* hide the editor */
     #invoice{ border:none; border-radius:0; width:7.5in; padding:.5in; page-break-inside:avoid }
   }
 </style>
@@ -384,7 +385,7 @@ function calc(){
     </tr>`;
 }
 
-function escapeHTML(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+function escapeHTML(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;","<":">","\"":"&quot;","'":"&#39;"}[m]));}
 function autoInv(){const d=new Date(),pad=n=>String(n).padStart(2,"0");return `INV-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`}
 
 /* init */
