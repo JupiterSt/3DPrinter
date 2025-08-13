@@ -72,7 +72,7 @@
   /* print: only invoice, perfect margins, hide top bar/buttons */
   @media print{
     body{ margin:0; background:#fff }
-    .noprint{ display:none !important }   /* <— hide Save/Load/Clear/Print buttons bar */
+    .noprint{ display:none !important }   /* hide Save/Load/Clear/Print controls */
     #app{ display:none }                   /* hide the editor */
     #invoice{ border:none; border-radius:0; width:7.5in; padding:.5in; page-break-inside:avoid }
   }
@@ -168,6 +168,33 @@
       </div>
     </div>
 
+    <!-- Finishing & Extras -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="font-bold">Finishing & Extras</h2>
+        <span class="badge">Optional</span>
+      </div>
+
+      <div class="grid sm:grid-cols-6 gap-4">
+        <div><label class="label">Sanding (hrs)</label><input id="sandingHrs" type="number" step="0.1" class="ipt" value="0"></div>
+        <div><label class="label">Sanding $/hr</label><input id="sandingRate" type="number" step="0.01" class="ipt" value="25"></div>
+        <div><label class="label">Painting (hrs)</label><input id="paintingHrs" type="number" step="0.1" class="ipt" value="0"></div>
+        <div><label class="label">Painting $/hr</label><input id="paintingRate" type="number" step="0.01" class="ipt" value="30"></div>
+        <div><label class="label">Finishing (hrs)</label><input id="finishingHrs" type="number" step="0.1" class="ipt" value="0"></div>
+        <div><label class="label">Finishing $/hr</label><input id="finishingRate" type="number" step="0.01" class="ipt" value="28"></div>
+
+        <div><label class="label">Design (CAD) hrs</label><input id="designHrs" type="number" step="0.1" class="ipt" value="0"></div>
+        <div><label class="label">Design $/hr</label><input id="designRate" type="number" step="0.01" class="ipt" value="35"></div>
+
+        <div class="sm:col-span-2"><label class="label">Materials / Consumables ($)</label><input id="materialsExtra" type="number" step="0.01" class="ipt" value="0"></div>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4 mt-4">
+        <label class="label m-0 flex items-center gap-2"><input id="includeServices" type="checkbox" checked>Include finishing & extras in totals</label>
+        <label class="label m-0 flex items-center gap-2"><input id="showServiceLines" type="checkbox" checked>Show service line details</label>
+      </div>
+    </div>
+
     <!-- Business / Customer -->
     <div class="card">
       <div class="flex items-center justify-between mb-2">
@@ -249,6 +276,15 @@
         <div>Labor: <span id="pLabor" class="num">$0.00</span></div>
         <div>Overhead: <span id="pOverhead" class="num">$0.00</span></div>
         <div>Packaging: <span id="pPack" class="num">$0.00</span></div>
+
+        <div id="bkServices">
+          <div>Sanding: <span id="pSanding" class="num">$0.00</span></div>
+          <div>Painting: <span id="pPainting" class="num">$0.00</span></div>
+          <div>Finishing: <span id="pFinishing" class="num">$0.00</span></div>
+          <div>Design (CAD): <span id="pDesign" class="num">$0.00</span></div>
+          <div>Materials: <span id="pMaterials" class="num">$0.00</span></div>
+        </div>
+
         <div>Shipping: <span id="pShip" class="num">$0.00</span></div>
       </div>
       <div class="totals">
@@ -289,7 +325,14 @@ const F={
   custName:$("custName"), custContact:$("custContact"),
   invNo:$("invNo"), po:$("po"), publicNotes:$("publicNotes"), terms:$("terms"),
   showNotes:$("showNotes"), showTerms:$("showTerms"),
-  logoInput:$("logoInput"), clearLogo:$("clearLogo"), logoImg:$("logoImg")
+  logoInput:$("logoInput"), clearLogo:$("clearLogo"), logoImg:$("logoImg"),
+  // Finishing & extras
+  sandingHrs:$("sandingHrs"), sandingRate:$("sandingRate"),
+  paintingHrs:$("paintingHrs"), paintingRate:$("paintingRate"),
+  finishingHrs:$("finishingHrs"), finishingRate:$("finishingRate"),
+  designHrs:$("designHrs"), designRate:$("designRate"),
+  materialsExtra:$("materialsExtra"),
+  includeServices:$("includeServices"), showServiceLines:$("showServiceLines")
 };
 
 /* ----- helpers ----- */
@@ -306,7 +349,7 @@ Object.values(F).forEach(el=>{if(el&&el.addEventListener)el.addEventListener("in
 /* ----- persistence ----- */
 $("saveBtn").addEventListener("click",()=>{localStorage.setItem("quote",JSON.stringify(readState()));alert("Saved locally.");});
 $("loadBtn").addEventListener("click",()=>{const s=localStorage.getItem("quote");if(!s)return alert("Nothing saved.");writeState(JSON.parse(s));calc();});
-$("clearBtn").addEventListener("click",()=>{localStorage.removeItem("quote");localStorage.removeItem("logoData");Object.values(F).forEach(el=>{if(el.value!==undefined)el.value=""});F.showNotes.checked=F.showTerms.checked=true;F.logoImg.classList.remove("show");calc();});
+$("clearBtn").addEventListener("click",()=>{localStorage.removeItem("quote");localStorage.removeItem("logoData");Object.values(F).forEach(el=>{if(el.value!==undefined)el.value=""});F.showNotes.checked=F.showTerms.checked=true;F.logoImg.classList.remove("show");F.includeServices.checked=true;F.showServiceLines.checked=true;calc();});
 
 /* ----- print only invoice ----- */
 $("printInvoiceBtn").addEventListener("click",()=>window.print());
@@ -320,11 +363,27 @@ F.clearLogo.addEventListener("click",()=>{localStorage.removeItem("logoData");F.
 function applyLogo(data){if(data){F.logoImg.src=data;F.logoImg.classList.add("show");}}
 
 /* ----- state ----- */
-function readState(){const o={};Object.entries(F).forEach(([k,el])=>{if(el&&el.value!==undefined)o[k]=el.value});o.printer=pSel.value;o.filament=fSel.value;o.showNotes=F.showNotes.checked;o.showTerms=F.showTerms.checked;o.logoData=localStorage.getItem("logoData")||"";return o;}
-function writeState(o){Object.entries(F).forEach(([k,el])=>{if(el&&el.value!==undefined&&o[k]!==undefined)el.value=o[k]});if(o.printer)pSel.value=o.printer;if(o.filament)fSel.value=o.filament;F.showNotes.checked=!!o.showNotes;F.showTerms.checked=!!o.showTerms;if(o.logoData)applyLogo(o.logoData);}
+function readState(){
+  const o={};
+  Object.entries(F).forEach(([k,el])=>{ if(el && el.value!==undefined) o[k]=el.value; });
+  o.printer=pSel.value; o.filament=fSel.value;
+  o.showNotes=F.showNotes.checked; o.showTerms=F.showTerms.checked;
+  o.includeServices=F.includeServices.checked; o.showServiceLines=F.showServiceLines.checked;
+  o.logoData=localStorage.getItem("logoData")||"";
+  return o;
+}
+function writeState(o){
+  Object.entries(F).forEach(([k,el])=>{ if(el&&el.value!==undefined && o[k]!==undefined) el.value=o[k]; });
+  if(o.printer) pSel.value=o.printer; if(o.filament) fSel.value=o.filament;
+  F.showNotes.checked=!!o.showNotes; F.showTerms.checked=!!o.showTerms;
+  F.includeServices.checked = o.includeServices!==undefined ? !!o.includeServices : true;
+  F.showServiceLines.checked = o.showServiceLines!==undefined ? !!o.showServiceLines : true;
+  if(o.logoData) applyLogo(o.logoData);
+}
 
 /* ----- calculator ----- */
 function calc(){
+  // base inputs
   const dia=parseFloat(F.diameter.value)||0, dens=parseFloat(F.density.value)||0;
   const spoolG=parseFloat(F.spoolWeight.value)||0, emptyG=parseFloat(F.emptySpool.value)||0, spoolPrice=parseFloat(F.spoolPrice.value)||0;
   const printHrs=parseFloat(F.printHrs.value)||0, watt=parseFloat(F.wattage.value)||0, life=parseFloat(F.lifetimeHrs.value)||0, price=parseFloat(F.printerPrice.value)||0;
@@ -332,6 +391,17 @@ function calc(){
   const overhead=(parseFloat(F.overheadPct.value)||0)/100, margin=(parseFloat(F.marginPct.value)||0)/100;
   const pack=parseFloat(F.packagingCost.value)||0, ship=parseFloat(F.shipping.value)||0, disc=parseFloat(F.discount.value)||0, taxPct=(parseFloat(F.taxPct.value)||0)/100;
 
+  // finishing & extras
+  const sandingH=parseFloat(F.sandingHrs.value)||0, sandingR=parseFloat(F.sandingRate.value)||0;
+  const paintingH=parseFloat(F.paintingHrs.value)||0, paintingR=parseFloat(F.paintingRate.value)||0;
+  const finishingH=parseFloat(F.finishingHrs.value)||0, finishingR=parseFloat(F.finishingRate.value)||0;
+  const designH=parseFloat(F.designHrs.value)||0, designR=parseFloat(F.designRate.value)||0;
+  const materials=parseFloat(F.materialsExtra.value)||0;
+
+  const includeServices = F.includeServices.checked;
+  const showServiceLines = F.showServiceLines.checked;
+
+  // derived
   const gpm=gramsPerMeter(dia,dens);
   const cpg=costPerGram(spoolPrice,spoolG,emptyG);
   const grams=F.gramsUsed.value!==""?parseFloat(F.gramsUsed.value)||0:(parseFloat(F.lengthM.value)||0)*gpm;
@@ -341,16 +411,30 @@ function calc(){
   const depr=life>0?(printHrs/life)*price:0;
   const labor=laborHrs*laborRate;
   const overheadCost=(filament+energy+depr+labor)*overhead;
-  const subtotal=filament+energy+depr+labor+overheadCost+pack;
-  const beforeTax=Math.max(0,subtotal-disc)+ship;
-  const tax=beforeTax*taxPct;
-  const total=beforeTax+tax;
-  const suggested=subtotal*(1+margin);
 
+  const basePrint = filament+energy+depr+labor+overheadCost+pack;
+
+  const sanding = sandingH*sandingR;
+  const painting = paintingH*paintingR;
+  const finishing = finishingH*finishingR;
+  const design   = designH*designR;
+
+  // services subtotal (only if included)
+  const services = includeServices ? (sanding + painting + finishing + design + materials) : 0;
+
+  const subtotal = basePrint + services;
+  const beforeTax = Math.max(0, subtotal - disc) + ship;
+  const tax = beforeTax*taxPct;
+  const total = beforeTax + tax;
+
+  const suggested = basePrint*(1+margin); // suggested rate for the print line (pre-services)
+
+  // KPI tiles
   $("costPerGram").textContent=money(cpg);
   $("gPerM").textContent=fixed(gpm,3);
   $("finalGrams").textContent=fixed(grams,2);
 
+  // breakdown
   $("pFilament").textContent=money(filament);
   $("pEnergy").textContent=money(energy);
   $("pDepr").textContent=money(depr);
@@ -358,11 +442,22 @@ function calc(){
   $("pOverhead").textContent=money(overheadCost);
   $("pPack").textContent=money(pack);
   $("pShip").textContent=money(ship);
+
+  // service breakdown lines visibility + values
+  $("bkServices").style.display = includeServices ? "" : "none";
+  $("pSanding").textContent  = money(includeServices ? sanding   : 0);
+  $("pPainting").textContent = money(includeServices ? painting  : 0);
+  $("pFinishing").textContent= money(includeServices ? finishing : 0);
+  $("pDesign").textContent   = money(includeServices ? design    : 0);
+  $("pMaterials").textContent= money(includeServices ? materials : 0);
+
+  // totals
   $("pSub").textContent=money(subtotal);
   $("pDisc").textContent="-"+money(disc);
   $("pTax").textContent=money(tax);
   $("pTotal").textContent=money(total);
 
+  // header/meta
   $("pBizName").textContent=F.bizName.value||"—";
   $("pBizContact").textContent=F.bizContact.value||"—";
   $("pCustName").textContent=F.custName.value||"—";
@@ -375,22 +470,48 @@ function calc(){
   $("pInvNo").textContent=F.invNo.value||autoInv();
   $("pDate").textContent=new Date().toLocaleDateString();
 
+  // invoice lines
   const desc=(F.partName.value||"3D print job")+(F.jobNotes.value?` — ${F.jobNotes.value}`:"");
-  $("lines").innerHTML=`
+  const rows=[];
+  // main print line
+  rows.push({desc, qty:1, rate:suggested, amount:basePrint});
+
+  if(includeServices){
+    const serviceRows=[];
+    if (sanding>0)   serviceRows.push({desc:"Sanding",   qty:sandingH,  rate:sandingR,  amount:sanding});
+    if (painting>0)  serviceRows.push({desc:"Painting",  qty:paintingH, rate:paintingR, amount:painting});
+    if (finishing>0) serviceRows.push({desc:"Finishing", qty:finishingH,rate:finishingR,amount:finishing});
+    if (design>0)    serviceRows.push({desc:"Design (CAD)", qty:designH, rate:designR, amount:design});
+    if (materials>0) serviceRows.push({desc:"Materials / Consumables", qty:1, rate:materials, amount:materials});
+
+    if (showServiceLines){
+      rows.push(...serviceRows);
+    } else if ((sanding+painting+finishing+design+materials) > 0){
+      // single rolled-up line
+      rows.push({desc:"Finishing & extras", qty:1, rate:(sanding+painting+finishing+design+materials), amount:(sanding+painting+finishing+design+materials)});
+    }
+  }
+
+  $("lines").innerHTML = rows.map(r=>`
     <tr>
-      <td class="desc">${escapeHTML(desc)}</td>
-      <td class="right num">1</td>
-      <td class="right num">${money(suggested)}</td>
-      <td class="right num">${money(total)}</td>
-    </tr>`;
+      <td class="desc">${escapeHTML(r.desc)}</td>
+      <td class="right num">${Number.isInteger(r.qty)?r.qty:fixed(r.qty,2)}</td>
+      <td class="right num">${money(r.rate)}</td>
+      <td class="right num">${money(r.amount)}</td>
+    </tr>`).join("");
 }
 
-function escapeHTML(s){return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;","<":">","\"":"&quot;","'":"&#39;"}[m]));}
-function autoInv(){const d=new Date(),pad=n=>String(n).padStart(2,"0");return `INV-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`}
+function escapeHTML(s){
+  return (s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+}
+function autoInv(){
+  const d=new Date(),pad=n=>String(n).padStart(2,"0");
+  return `INV-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`;
+}
 
 /* init */
 (function(){
-  const logo=localStorage.getItem("logoData"); if(logo){F.logoImg.src=logo;F.logoImg.classList.add("show")}
+  const logo=localStorage.getItem("logoData"); if(logo){$("logoImg").src=logo;$("logoImg").classList.add("show")}
   pSel.value=printers[0].id; fSel.value=filaments[0].id;
   loadPrinter(printers[0].id); loadFilament(filaments[0].id);
   calc();
